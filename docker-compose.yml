@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: vladislav
+      RABBITMQ_DEFAULT_PASS: hard_password
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+  producer:
+    build:
+      context: .
+      dockerfile: Dockerfile.producer
+    container_name: producer
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./data.txt:/app/data.txt
+    command: ["sh", "-c", "sleep 10 && ./producer"]
+
+  consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile.consumer
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./output:/app/output
+    command: ["sh", "-c", "sleep 10 && ./consumer"]
+    deploy:
+      replicas: ${CONSUMER_REPLICAS:-1}

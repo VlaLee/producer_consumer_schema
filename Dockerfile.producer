@@ -1,0 +1,32 @@
+FROM ubuntu:20.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+WORKDIR /app
+
+# Установка необходимых зависимостей
+RUN apt-get update && apt-get upgrade -y && apt-get install -y \
+    build-essential \
+    cmake \
+    bash \
+    libev-dev \
+    libev4 \
+    git \
+    libssl-dev \
+    && git clone https://github.com/CopernicaMarketingSoftware/AMQP-CPP.git && \
+    cd AMQP-CPP && \
+    mkdir build && cd build && \
+    cmake .. -DAMQP-CPP_LINUX_TCP=ON && \
+    cmake --build . --target install \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Копирование исходного кода и данных
+COPY producer.cpp /app/
+COPY data.txt /app/
+
+# Компиляция producer.cpp с добавлением -lpthread и -ldl
+RUN g++ -std=c++17 producer.cpp -o producer -lamqpcpp -lssl -lcrypto -lev -lpthread -ldl
+
+# Команда для запуска producer
+CMD ["./producer"]
